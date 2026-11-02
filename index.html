@@ -117,7 +117,7 @@ const sv=()=>localStorage.bm_pomo=JSON.stringify(pm);
 const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 function tick(){if(V==='sim'&&S.end&&Date.now()>S.end){S.end=0;finishSim()}const st=$('#st');if(st&&S.end)st.textContent='⏳ '+fmt(S.end-Date.now());if(pm.end){const l=pm.end-Date.now();if(l<=0){beep(3);navigator.vibrate&&navigator.vibrate([200,100,200]);pm.m=pm.m==='w'?'b':'w';pm.left=PM[pm.m];pm.end=0;sv()}else pm.left=l}
  const a=$('#pt'),b=$('#pmm');if(a)a.textContent=fmt(pm.left);a.style.color=pm.m==='w'?'#fff':'#6d9bff'+(pm.end?' ⏸':' ▶');if(b)b.textContent=pm.m==='w'?'Foco':'Pausa';
- document.title=pm.end?fmt(pm.left)+' · Residencia':'Exámenes de residencia';ambSync();pipUpd();if(Date.now()-lastMs>15e3){lastMs=Date.now();ms()}}
+ document.title=pm.end?fmt(pm.left)+' · Residencia':'Exámenes de residencia';ambSync();pipUpd();if(window.AndroidBridge){try{window.AndroidBridge.guardarRacha(s.n|0,d.goal|0,d.n|0)}catch(_){}} if(Date.now()-lastMs>15e3){lastMs=Date.now();ms()}}
 setInterval(tick,500);
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;navigator.vibrate&&navigator.vibrate(8);const d=b.dataset;
  if(d.snd!=null){snd=!snd;localStorage.bm_snd=snd?1:0;hdr();tone(784,0,.15)}
