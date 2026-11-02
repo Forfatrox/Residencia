@@ -52,7 +52,7 @@ function home(){let h='<button class="p" data-stats style="width:100%;margin-bot
   h+=`<div class="card"><b>${esc(e)}</b><div class="m">${qs.length} preguntas · ${r.length} respondidas · ${a.length} aciertos · ${r.length-a.length} falladas</div><div class="bar"><i style="width:${qs.length?r.length/qs.length*100:0}%"></i></div><div class="row" style="margin-top:10px"><button class="p" data-study="${esc(e)}">Estudiar</button><button data-expq="${esc(e)}">⬇ Exportar</button><button data-del="${esc(e)}">Borrar</button></div></div>`});
  if(ex.length)h+='<button data-study="*">Repasar por especialidad (todos los exámenes)</button>';
  h+=catCard();let h2='<div class="card"><b>Importar preguntas</b><div class="m">Uno o varios archivos JSON. Se agrupan solos por examen.</div><p><input type="file" id="fq" accept=".json" multiple></p>'+(Q.length?'<button data-expq="">⬇ Exportar todas las preguntas (un solo archivo)</button>':'')+'</div>';
- h2+='<div class="card"><b>Respaldo del progreso</b> <span class="m">· v23</span><div class="m">Guarda respuestas, repaso espaciado, racha, meta diaria y ajustes del pomodoro y del sonido de fondo. Toca «Copiar progreso», pega el texto en un mensaje a ti mismo y, en el otro dispositivo, toca «Pegar progreso».</div><div class="row" style="margin-top:8px"><button class="p" data-cpy>📋 Copiar progreso</button><button data-pst>📥 Pegar progreso</button></div><div id="pbox"></div></div>';
+ h2+=syncCard();h2+='<div class="card"><b>Respaldo del progreso</b> <span class="m">· v24</span><div class="m">Guarda respuestas, repaso espaciado, racha, meta diaria y ajustes del pomodoro y del sonido de fondo. Toca «Copiar progreso», pega el texto en un mensaje a ti mismo y, en el otro dispositivo, toca «Pegar progreso».</div><div class="row" style="margin-top:8px"><button class="p" data-cpy>📋 Copiar progreso</button><button data-pst>📥 Pegar progreso</button></div><div id="pbox"></div></div>';
  const g=gs(),f=Math.max(0,g.goal-g.n),hasQ=Q.some(q=>!q.anulada);
  const start=hasQ?`<button class="p big" data-quick>⚡ Empezar ahora</button><div class="m" style="text-align:center;margin-bottom:8px">${f?`${f} pregunta${f===1?'':'s'} al azar, de cualquier tema, sin responder`:'Meta de hoy cumplida 🎉 · si quieres, una más al azar'}</div>`:'';
  return tabs()+(T==='q'?start+(hasQ?goalCard():'')+`<details ${hasQ?'':'open'}><summary>📂 Elegir examen o tema a mano</summary>${h}</details>`:goalCard()+revCard()+h2)}
@@ -97,7 +97,7 @@ document.addEventListener('click',async e=>{const t=e.target,d=t.dataset;
  if(d.study!=null){S={e:d.study,b:'',s:'',f:'',r:false};V='setup';render()}
  else if(d.home!=null){V='home';render()}
  else if(d.go!=null){S.list=pick();if(!S.list.length)return toast('No hay preguntas con esos filtros.');if(S.r)S.list.sort(()=>Math.random()-.5);S.i=0;S.ok=0;S.fl=[];S.cur=null;S.rv=false;S.rt='';V='study';render()}
- else if(d.a){const q=S.list[S.i],n=+d.a,r=mk(q.id,n,n===q.ok);P[q.id]=r;S.cur=r;if(r.ok)S.ok++;else(S.fl=S.fl||[]).push([q,n]);sfx(r.ok);await putMany('p',[r]);logDay(1,r.ok?1:0);addDaily(1);render()}
+ else if(d.a){const q=S.list[S.i],n=+d.a,r=mk(q.id,n,n===q.ok);P[q.id]=r;S.cur=r;if(r.ok)S.ok++;else(S.fl=S.fl||[]).push([q,n]);sfx(r.ok);await putMany('p',[r]);logDay(1,r.ok?1:0);addDaily(1);schedSync();render()}
  else if(d.next!=null){S.i++;S.cur=null;S.rv=false;S.rt='';render()}
  else if(d.del){if(confirm(`¿Borrar "${d.del}" con todo su progreso?`)){const ids=Q.filter(q=>q.examen===d.del).map(q=>q.id);await delMany('q',ids);await delMany('p',ids);await load();render()}}});
 document.addEventListener('change',async e=>{const t=e.target;
@@ -134,14 +134,14 @@ function chk(d){if(d.n>=d.goal&&stz().last!==d.date){const s=stz(),g=s.last?gp(s
 function addDaily(k){const d=gs();d.n+=k;localStorage.bm_day=JSON.stringify(d);chk(d);hdr()}
 const goalCard=()=>{const d=gs(),f=Math.max(0,d.goal-d.n);return`<div class="card"><b>🎯 Meta de hoy</b><div class="m">${f?`Te faltan ${f} pregunta${f===1?'':'s'} para tu meta de ${d.goal}.`:'¡Meta cumplida! Tu racha de hoy está asegurada 🔥'}</div><div class="bar"><i style="width:${Math.min(100,d.n/d.goal*100)}%"></i></div><div class="row" style="margin-top:10px"><span class="m">Meta diaria:</span>${[1,2,3,4,5,10,20].map(g=>`<button class="${g===d.goal?'on':''}" data-goal="${g}">${g}</button>`).join('')}</div></div>`};
 function simq(){const q=S.list[S.i],sel=S.sa[q.id];return`<div class="m">Simulacro · ${S.i+1}/${S.list.length} · <b id="st"></b></div><div class="bar"><i style="width:${S.i/S.list.length*100}%"></i></div><div class="card"><p>${esc(q.en)}</p>${q.im.map(s=>`<img class="q" src="${s}">`).join('')}${q.op.map((o,i)=>`<button class="opt${sel===i+1?' sel':''}" data-sa="${i+1}">${i+1}. ${esc(o)}</button>`).join('')}<div class="m">Toca de nuevo tu opción para dejarla en blanco.</div></div><div class="row"><button data-home>Salir</button><button data-prev ${S.i?'':'disabled'}>Anterior</button><button class="p" data-snext>${S.i+1===S.list.length?'Terminar':'Siguiente'}</button></div>`}
-async function finishSim(){if(V!=='sim')return;const rs=[];let a=0,e=0,bl=0;S.list.forEach(q=>{const n=S.sa[q.id];if(!n)bl++;else{const ok=n===q.ok;ok?a++:e++;rs.push(mk(q.id,n,ok))}});rs.forEach(r=>P[r.id]=r);await putMany('p',rs);S.res={a,e,bl,sc:a-e/3,max:S.list.length};V='res';logDay(rs.length,rs.filter(x=>x.ok).length);addDaily(rs.length);render()}
+async function finishSim(){if(V!=='sim')return;const rs=[];let a=0,e=0,bl=0;S.list.forEach(q=>{const n=S.sa[q.id];if(!n)bl++;else{const ok=n===q.ok;ok?a++:e++;rs.push(mk(q.id,n,ok))}});rs.forEach(r=>P[r.id]=r);await putMany('p',rs);S.res={a,e,bl,sc:a-e/3,max:S.list.length};V='res';logDay(rs.length,rs.filter(x=>x.ok).length);addDaily(rs.length);schedSync();render()}
 function hdr(){const s=ST,d=gs();try{if(window.AndroidBridge&&AndroidBridge.guardarRacha)AndroidBridge.guardarRacha(s.n|0,d.goal|0,Math.min(d.n,d.goal)|0)}catch(_){}$('#hd').innerHTML=`<b>📚 Exámenes de residencia</b><span data-stats style="cursor:pointer" class="chip ${s.done?'':'dim'}" title="Mejor racha: ${s.best}${s.gr?' · día de gracia en uso':''}">🔥 ${s.n} ${s.n===1?'día':'días'}</span><span class="chip">🎯 ${Math.min(d.n,d.goal)}/${d.goal}</span><button data-snd>${snd?'🔊':'🔇'}</button>`;
  const c=(k,a)=>a.map(x=>`<button class="${pm.cfg[k]===x?'on':''}" data-pc="${k}${x}">${x}</button>`).join('')+`<button data-pc="${k}0">…</button>`;
  $('#pm').innerHTML=pmMin?'<button id="pt" data-pm="x" title="Expandir"></button>':`<div id="pop" ${popOpen?'':'hidden'}><div class="m">Foco (min)</div><div class="row">${c('w',[15,25,30,45,50])}</div><div class="m" style="margin-top:6px">Pausa (min)</div><div class="row">${c('b',[5,10,15])}</div>${am()}</div><button id="pt" data-pm="t"></button><button data-pm="r" title="Reiniciar">↺</button><button data-pm="m" id="pmm"></button><button data-pm="c" title="Ajustes: duración y sonido">⚙</button><button data-pm="f" title="Ventana flotante">⧉</button><button data-pm="x" title="Minimizar">–</button>`;tick()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.pm==='c'){popOpen=!popOpen;hdr()}
  else if(d.pc){const k=d.pc[0];let v=+d.pc.slice(1);if(!v){v=Math.round(+prompt('Minutos (1-180):',pm.cfg[k]));if(!(v>=1&&v<=180))return}pm.cfg[k]=v;if(pm.m===k&&!pm.end)pm.left=v*6e4;sv();hdr()}
- else if(d.goal){const x=gs();x.goal=+d.goal;localStorage.bm_day=JSON.stringify(x);chk(x);hdr();render()}
+ else if(d.goal){const x=gs();x.goal=+d.goal;localStorage.bm_day=JSON.stringify(x);chk(x);hdr();schedSync();render()}
  else if(d.sn){S.n=+d.sn;render()}
  else if(d.sim!=null){S.list=pick().sort(()=>Math.random()-.5).slice(0,S.n||10);if(!S.list.length)return alert('No hay preguntas con esos filtros.');S.sa={};S.i=0;S.end=Date.now()+Math.ceil(S.list.length*1.4)*6e4;V='sim';render()}
  else if(d.sa){const q=S.list[S.i];S.sa[q.id]=S.sa[q.id]===+d.sa?0:+d.sa;document.querySelectorAll('[data-sa]').forEach(x=>x.classList.toggle('sel',+x.dataset.sa===S.sa[q.id]));tone(520,0,.06,.08)}
@@ -160,12 +160,12 @@ const mk=(id,sel,ok)=>{const r={id,sel,ok,t:Date.now()},pv=P[id],t=ds(new Date()
  if(ok&&pv&&pv.due&&pv.due>t){r.box=pv.box;r.due=pv.due}else{r.box=ok?Math.min(5,(pv&&pv.box!=null?pv.box:0)+1):0;const d=new Date();d.setDate(d.getDate()+SRI[r.box]);r.due=ds(d)}return r};
 const revCard=()=>{const n=Q.filter(q=>!q.anulada&&due(q)).length;return`<div class="card"><b>🔁 Repaso espaciado</b><div class="m">${n?`Tienes ${n} pregunta${n===1?'':'s'} para repasar hoy. Las falladas vuelven en 1 día; las que aciertas seguido se espacian a 3, 7, 14, 30 y 60 días.`:'Nada pendiente hoy 🎉. Las preguntas que respondas aparecerán aquí cuando les toque repasarlas.'}</div>${n?`<p><button class="p" data-rev>Repasar ahora (${n})</button></p>`:''}</div>`};
 const bk=()=>({v:2,p:Object.values(P),streak:stz(),day:gs(),log:JSON.parse(localStorage.bm_log||'{}'),cfg:{pomo:pm.cfg,amb}});
-async function rest(j){const m=(j.p||[]).filter(p=>!P[p.id]||p.t>P[p.id].t);await putMany('p',m);
+async function rest(j,quiet){const m=(j.p||[]).filter(p=>!P[p.id]||p.t>P[p.id].t);await putMany('p',m);
  if(j.log){const l=JSON.parse(localStorage.bm_log||'{}');for(const k in j.log){const a=l[k]||{n:0,ok:0};l[k]={n:Math.max(a.n,j.log[k].n),ok:Math.max(a.ok,j.log[k].ok)}}localStorage.bm_log=JSON.stringify(l)}if(j.streak){const a=stz(),b=j.streak,s=((b.last||'')>(a.last||'')||((b.last||'')===(a.last||'')&&b.n>a.n))?{...b}:{...a};s.best=Math.max(a.best||0,b.best||0);s.g=[a.g,b.g].filter(Boolean).sort().pop();localStorage.bm_streak=JSON.stringify(s);ST=cur()}
  if(j.day){const a=gs(),b=j.day;if(b.date===a.date)a.n=Math.max(a.n,b.n);a.goal=b.goal||a.goal;localStorage.bm_day=JSON.stringify(a);chk(a)}
  if(j.cfg&&j.cfg.pomo){pm.cfg=j.cfg.pomo;sv()}
  if(j.cfg&&j.cfg.amb){amb=okA(j.cfg.amb);saveAmb();ambSync()}
- await load();hdr();render();return m.length}
+ if(quiet){const np={};(await all('p')).forEach(p=>np[p.id]=p);P=np;hdr()}else{await load();hdr();render()}return m.length}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.rev==null)return;S={e:'*',b:'',s:'',f:'d',r:false};S.list=pick().sort((a,c)=>(P[a.id].due||'').localeCompare(P[c.id].due||''));if(!S.list.length)return;S.i=0;S.ok=0;S.fl=[];S.cur=null;S.rv=false;S.rt='';V='study';render()});
 const outq=e=>Q.filter(q=>!e||q.examen===e).map(q=>({id:q.id,examen:q.examen,numero:q.numero,especialidad:q.esp,enunciado:q.en,opciones:q.op,correcta:q.ok,anulada:q.anulada,explicacion:q.ex,justificaciones:q.js,imagenes:q.im}));
 async function saveF(name,obj){const f=new File([JSON.stringify(obj)],name,{type:'application/json'});if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(err){if(err&&err.name==='AbortError')return}}const u=URL.createObjectURL(f),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)}
@@ -218,7 +218,46 @@ const am=()=>`<div class="m" style="margin-top:10px">🎧 Sonido de fondo</div><
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.as){amb.s=b.dataset.as;ambHold=false;saveAmb();pvUntil=Date.now()+3000;hdr()}ambSync()});
 document.addEventListener('input',e=>{if(e.target.id==='av'){amb.v=e.target.value/100;pvUntil=Date.now()+2500;if(AEL)AEL.volume=vol();ambSync()}});
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='av')saveAmb();else if(t.dataset.al!=null){amb.l=t.checked;saveAmb();ambSync()}});
-ST=cur();open().then(load).then(()=>{render();hdr();tick();fetch('catalogo.json',{cache:'no-cache'}).then(r=>r.json()).then(c=>{CAT=c;syncCat();if(V==='home')render()}).catch(()=>{})});
+
+/* ===== Sincronización automática (Firebase Firestore vía REST) ===== */
+const FB={p:'residencia-2b31e',k:'AIzaSyDXMk7FipTS0jxw1hqzz-p1cdp9hphsNd0'};
+const syCode=()=>localStorage.bm_sync||'';
+const syId=c=>String(c||'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+const syUrl=c=>`https://firestore.googleapis.com/v1/projects/${FB.p}/databases/(default)/documents/sync/${syId(c)}`;
+const syFmt=id=>{id=syId(id).toUpperCase();return id.slice(0,4)+'-'+id.slice(4,8)+'-'+id.slice(8,12)};
+function syGen(){const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789',r=new Uint8Array(12);crypto.getRandomValues(r);return syFmt([...r].map(x=>A[x%A.length]).join(''))}
+let syBusy=false,syAgain=false,syTimer=0,syErr='';
+function syStatus(){if(syErr)return syErr;const t=+localStorage.bm_syt;return t?'Última sincronización: '+new Date(t).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'}):'Aún sin sincronizar.'}
+function syShow(){const el=$('#sys');if(el)el.textContent=syStatus()}
+async function syncNow(opt){opt=opt||{};const c=syCode();if(!c)return;if(syBusy){syAgain=true;return}syBusy=true;
+ try{for(let i=0;i<3;i++){
+  const r=await fetch(syUrl(c)+'?key='+FB.k);let ut=null;
+  if(r.status===200){const j=await r.json();ut=j.updateTime;const s=j.fields&&j.fields.d&&j.fields.d.stringValue;if(s){const o=JSON.parse(s);if(!opt.first)delete o.cfg;await rest(o,true)}}
+  else if(r.status!==404)throw new Error('GET '+r.status);
+  const body=JSON.stringify(bk());if(body.length>900000)throw new Error('El progreso es demasiado grande para sincronizar.');
+  const q='?key='+FB.k+'&updateMask.fieldPaths=d&updateMask.fieldPaths=t&'+(ut?'currentDocument.updateTime='+encodeURIComponent(ut):'currentDocument.exists=false');
+  const w=await fetch(syUrl(c)+q,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{d:{stringValue:body},t:{integerValue:String(Date.now())}}})});
+  if(w.ok){localStorage.bm_syt=Date.now();syErr='';syShow();return}
+  if(w.status===400||w.status===409||w.status===412)continue;
+  throw new Error('PUT '+w.status)}
+  throw new Error('Conflicto, se reintentará.')}
+ finally{syBusy=false;if(syAgain){syAgain=false;schedSync(2500)}}}
+const syBg=()=>syncNow().catch(e=>{syErr='No se pudo sincronizar (se reintentará).';syShow()});
+function schedSync(ms){if(!syCode())return;clearTimeout(syTimer);syTimer=setTimeout(syBg,ms||4000)}
+function syncCard(){const c=syCode();
+ if(!c)return'<div class="card"><b>☁️ Sincronización automática</b><div class="m">Guarda tu progreso en la nube y lo comparte entre tus dispositivos sin copiar nada. En el primer dispositivo toca «Activar»; te dará un código. En el otro, escríbelo abajo.</div><div class="row" style="margin-top:8px"><button class="p" data-sy="new">☁️ Activar (primer dispositivo)</button></div><p class="m" style="margin-top:12px">¿Ya tienes un código? Escríbelo aquí:</p><textarea id="sycode" rows="1" placeholder="XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></textarea><p><button data-sy="link">🔗 Vincular este dispositivo</button></p></div>';
+ return'<div class="card"><b>☁️ Sincronización activa</b><div class="m">Tu progreso se guarda y se actualiza solo al abrir la app y poco después de responder. Código para vincular otro dispositivo:</div><p style="font-size:22px;letter-spacing:2px;margin:8px 0"><b>'+esc(c)+'</b></p><div class="row"><button class="p" data-sy="now">🔄 Sincronizar ahora</button><button data-sy="cp">📋 Copiar código</button><button data-sy="off">Desactivar</button></div><div id="sys" class="m" style="margin-top:8px">'+esc(syStatus())+'</div></div>'}
+document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.dataset.sy==null)return;const a=b.dataset.sy;
+ if(a==='new'){b.disabled=true;b.textContent='Conectando…';const c=syGen();localStorage.bm_sync=c;try{await syncNow({first:true});bn('☁️ Sincronización activada. Código: '+c)}catch(_){localStorage.removeItem('bm_sync');alert('No pude conectar. Revisa tu internet e inténtalo de nuevo.')}render()}
+ else if(a==='link'){const id=syId(($('#sycode')||{}).value);if(id.length!==12){alert('Escribe el código completo (12 letras y números).');return}const c=syFmt(id);b.disabled=true;b.textContent='Conectando…';
+  try{const r=await fetch(syUrl(c)+'?key='+FB.k);if(r.status===404){alert('No encontré ese código. Revisa que esté bien escrito.');render();return}if(!r.ok)throw 0;localStorage.bm_sync=c;await syncNow({first:true});bn('✅ Dispositivo vinculado y progreso fusionado')}catch(_){alert('No pude conectar. Revisa tu internet e inténtalo de nuevo.')}render()}
+ else if(a==='now'){b.disabled=true;b.textContent='Sincronizando…';try{await syncNow({first:true});bn('✅ Sincronizado')}catch(_){alert('No pude sincronizar. Revisa tu internet.')}render()}
+ else if(a==='cp'){try{await navigator.clipboard.writeText(syCode());bn('📋 Código copiado')}catch(_){alert('Tu código es: '+syCode())}}
+ else if(a==='off'){if(confirm('¿Desactivar la sincronización en este dispositivo? Tu progreso se queda aquí y en la nube.')){localStorage.removeItem('bm_sync');localStorage.removeItem('bm_syt');render()}}});
+document.addEventListener('visibilitychange',()=>{if(!syCode())return;if(document.visibilityState==='visible')setTimeout(syBg,800);else{clearTimeout(syTimer);syBg()}});
+addEventListener('online',()=>{if(syCode())syBg()});
+
+ST=cur();open().then(load).then(()=>{render();hdr();tick();syBg();fetch('catalogo.json',{cache:'no-cache'}).then(r=>r.json()).then(c=>{CAT=c;syncCat();if(V==='home')render()}).catch(()=>{})});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 
 /* ===== Copiar para IA (niveles) =====
